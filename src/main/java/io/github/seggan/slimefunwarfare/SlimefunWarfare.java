@@ -141,7 +141,7 @@ public class SlimefunWarfare extends AbstractAddon implements Listener {
         }
 
         try {
-            Class<?> orechid = Class.forName("me.profelements.dynatech.items.tools.Orechid");
+            Class<?> orechid = resolveDynaTechOrechidClass();
             Method method = orechid.getDeclaredMethod(
                 "registerOre", Material.class, SlimefunItemStack.class, float.class
             );
@@ -165,6 +165,14 @@ public class SlimefunWarfare extends AbstractAddon implements Listener {
             getLogger().info("DynaTech Orechid integration enabled.");
         } catch (ReflectiveOperationException ex) {
             getLogger().log(Level.WARNING, "DynaTech was detected but its Orechid API could not be loaded.", ex);
+        }
+    }
+
+    private static Class<?> resolveDynaTechOrechidClass() throws ClassNotFoundException {
+        try {
+            return Class.forName("me.profelements.dynatech.items.electric.machines.Orechid");
+        } catch (ClassNotFoundException modernApiMissing) {
+            return Class.forName("me.profelements.dynatech.items.tools.Orechid");
         }
     }
 
