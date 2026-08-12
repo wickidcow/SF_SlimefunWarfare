@@ -98,16 +98,64 @@ jobs:
           JAR="dist/${LEGACY_ARTIFACT}"
 
           cat > release-notes.md <<'EOF'
-          ## SlimefunWarfare Legacy
+          # ⚔️ SlimefunWarfare Legacy v1.0.0
 
-          Modernized Warfare build for Slimefun Legacy and Paper 26.2.
+          The first Slimefun Legacy release of Warfare modernizes the addon for the Paper 26.2 generation while preserving the original combat, technology, meteor, machine, and power-suit progression.
 
-          - Java 25 build toolchain with Java 21 addon bytecode.
-          - Paper 26.2 API target.
-          - GuizhanLibPlugin runtime requirement removed.
-          - Unsafe asynchronous player/inventory/world access removed from the main repeating tasks.
-          - Optional DynaTech, InfinityExpansion and TownyFlight integrations preserved.
-          - Direct raw JAR: `SF_SlimefunWarfare_Legacy_v1.0.0.jar`.
+          ## ✅ Compatibility updates
+          - Updated the project to the **Paper 26.2 API**.
+          - Builds on **Java 25** while emitting **Java 21-compatible addon bytecode**.
+          - **Slimefun Legacy** is now the primary runtime target.
+          - Removed the hard **GuizhanLibPlugin** runtime dependency.
+          - Removed the old Gugu automatic-updater path.
+          - Migrated removed Paper `Attribute.GENERIC_*` constants to the current attribute API.
+          - Replaced unsafe asynchronous player/inventory/world repeating work with Paper-safe scheduling.
+          - Added support for both current and legacy **DynaTech Orechid** package layouts.
+          - Added detection for both **InfinityExpansion** and **InfinityExpansion2**.
+
+          ## 🔫 Gameplay/runtime fixes
+          - Fixed an inherited gun-ammunition race where Slimefun backpack contents were resolved asynchronously after a weapon had already decided whether it could fire.
+          - Off-hand and normal player-inventory ammunition consumption is now synchronous and deterministic.
+          - Backpack-ammo scanning is intentionally disabled during firing until it can be implemented safely around Slimefun Legacy's asynchronous backpack API.
+
+          ## 🇺🇸 English Legacy cleanup
+          - Restored **Seggan's original English item names and lore** over the Chinese intermediate-fork catalog.
+          - Restored English Slimefun Warfare guide/category names.
+          - Restored English power-suit module text and configuration comments.
+          - Removed obsolete bundled Guizhan helper code.
+          - Removed an unused duplicate item catalog inherited from the intermediate fork.
+
+          ## 🧹 Build & repository cleanup
+          - Removed obsolete Java 8 and mismatched Gradle workflows.
+          - Added the current Legacy GitHub Actions build and validation checks.
+          - Updated the README with upstream credit, feature overview, compatibility, dependencies, install instructions, GPLv3 wording, AlbionMC.com context, and non-affiliation notice.
+
+          ## 📦 Dependencies
+          **Required:** Slimefun Legacy
+
+          **Optional integrations:**
+          - InfinityExpansion / InfinityExpansion2
+          - DynaTech
+          - TownyFlight
+
+          **Not required:**
+          - GuizhanLibPlugin
+          - SimpleStorage
+          - Separate InfinityLib plugin/JAR (InfinityLib is shaded into this build)
+
+          ## 📥 Download
+          Use the attached raw server plugin directly:
+
+          `SF_SlimefunWarfare_Legacy_v1.0.0.jar`
+
+          Place it directly in your server's `plugins` folder. No source archive extraction is required.
+
+          ## 🧪 Runtime testing note
+          Compilation, metadata validation, packaging, and JAR output are verified. Warfare is a large addon with high-impact systems, so continued live testing is recommended for projectiles, explosives/nuclear effects, meteors, machines/energy, power-suit flight/modules, and deeper Folia behavior.
+
+          ---
+
+          Full credit remains with **Seggan** for creating SlimefunWarfare and **LobbyTech-MC** for maintaining the intermediate modernized fork used as this Legacy branch's starting point.
           EOF
 
           if gh release view "$TAG" >/dev/null 2>&1; then
