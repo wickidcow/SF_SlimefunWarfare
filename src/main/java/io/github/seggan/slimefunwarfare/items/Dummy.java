@@ -13,6 +13,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Husk;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -31,30 +32,36 @@ public class Dummy extends SlimefunItem {
         addItemHandler((ItemUseHandler) e -> {
             e.cancel();
 
-            if (!e.getClickedBlock().isPresent()) return;
+            if (e.getClickedBlock().isEmpty()) {
+                return;
+            }
 
-            Location l = e.getClickedBlock().get().getRelative(e.getClickedFace()).getLocation();
+            Location location = e.getClickedBlock().get().getRelative(e.getClickedFace()).getLocation();
+            Husk dummy = location.getWorld().spawn(location, Husk.class);
+            PersistentDataAPI.setString(dummy, KEY, "DUMMY");
 
-            Husk z = l.getWorld().spawn(l, Husk.class);
-            PersistentDataAPI.setString(z, KEY, "DUMMY");
+            dummy.setCustomName("Training Dummy");
+            dummy.setCustomNameVisible(true);
+            dummy.setRemoveWhenFarAway(false);
+            dummy.setAI(false);
+            dummy.setAware(false);
 
-            z.setCustomName("假人");
-            z.setCustomNameVisible(true);
+            setBaseAttribute(dummy, Attribute.MAX_HEALTH, 1024);
+            dummy.setHealth(1024);
+            setBaseAttribute(dummy, Attribute.ARMOR, 0);
+            setBaseAttribute(dummy, Attribute.ARMOR_TOUGHNESS, 0);
 
-            z.setRemoveWhenFarAway(false);
-
-            z.setAI(false);
-            z.setAware(false);
-
-            z.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(1024);
-            z.setHealth(1024);
-            z.getAttribute(Attribute.GENERIC_ARMOR).setBaseValue(0);
-            z.getAttribute(Attribute.GENERIC_ARMOR_TOUGHNESS).setBaseValue(0);
-
-            Player p = e.getPlayer();
-            if (p.getGameMode() != GameMode.CREATIVE) {
-                ItemUtils.consumeItem(p.getInventory().getItem(e.getHand()), true);
+            Player player = e.getPlayer();
+            if (player.getGameMode() != GameMode.CREATIVE) {
+                ItemUtils.consumeItem(player.getInventory().getItem(e.getHand()), true);
             }
         });
+    }
+
+    private static void setBaseAttribute(Husk dummy, Attribute attribute, double value) {
+        AttributeInstance instance = dummy.getAttribute(attribute);
+        if (instance != null) {
+            instance.setBaseValue(value);
+        }
     }
 }
