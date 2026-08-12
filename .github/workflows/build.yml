@@ -45,13 +45,8 @@ jobs:
           grep -Fq "api-version: '26.2'" src/main/resources/plugin.yml
           grep -Fq '<finalName>SF_SlimefunWarfare_Legacy_v${project.version}</finalName>' pom.xml
 
-          if grep -R --line-number "GuizhanLibPlugin" src pom.xml; then
-            echo "GuizhanLibPlugin must not be a runtime requirement in the Legacy fork."
-            exit 1
-          fi
-
-          if grep -R --line-number "GuizhanUpdater" src/main/java; then
-            echo "Gugu updater code must not be present in the Legacy fork."
+          if grep -R --line-number -E 'net\.guizhanss|GuizhanUpdater\.start|isPluginEnabled\("GuizhanLibPlugin"\)' src/main/java pom.xml src/main/resources/plugin.yml; then
+            echo "Guizhan runtime/update code must not be present in the Legacy fork."
             exit 1
           fi
 
