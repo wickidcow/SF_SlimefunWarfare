@@ -712,7 +712,7 @@ public final class Items {
 
         ItemMeta meta = Items.ENERGY_BLADE.getItemMeta();
         meta.setUnbreakable(true);
-        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, new AttributeModifier(
+        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(
             UUID.randomUUID(),
             "generic.attackDamage",
             13,
@@ -726,7 +726,7 @@ public final class Items {
 
         // Sets the attack speed to match that of a sword
         meta = BATTLE_AXE.getItemMeta();
-        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, new AttributeModifier(
+        meta.addAttributeModifier(Attribute.ATTACK_SPEED, new AttributeModifier(
             UUID.randomUUID(),
             "generic.attackSpeed",
             -2.4,
@@ -734,7 +734,7 @@ public final class Items {
             EquipmentSlot.HAND
         ));
 
-        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, new AttributeModifier(
+        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(
             UUID.randomUUID(),
             "generic.attackDamage",
             8,
@@ -749,7 +749,7 @@ public final class Items {
         OSMIUM_SWORD.addUnsafeEnchantment(Enchantment.UNBREAKING, 8);
 
         meta = OSMIUM_SWORD.getItemMeta();
-        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, new AttributeModifier(
+        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(
             UUID.randomUUID(),
             "generic.attackDamage",
             9,
