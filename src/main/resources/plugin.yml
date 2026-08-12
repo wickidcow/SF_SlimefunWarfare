@@ -11,5 +11,6 @@ api-version: '26.2'
 depend: [Slimefun]
 softdepend:
   - InfinityExpansion
+  - InfinityExpansion2
   - DynaTech
   - TownyFlight
