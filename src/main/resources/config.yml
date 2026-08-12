@@ -11,9 +11,10 @@ explosions:
 guns:
   # Automatically fire supported guns while sneaking.
   autoshoot: true
-  # When enabled, bullets may be consumed from the player's inventory.
+  # When enabled, bullets may be consumed from the player's normal inventory storage.
   # When disabled, bullets are only consumed from the off-hand.
-  # Disable this if inventory scanning causes measurable server load.
+  # Slimefun backpacks are intentionally not scanned because their contents are loaded asynchronously;
+  # weapon firing stays synchronous so ammunition is consumed exactly once before the shot is created.
   use-bullets-from-inv: true
   # Enables the minimum firing-range restriction used for weapon balance.
   min-range-on: true
