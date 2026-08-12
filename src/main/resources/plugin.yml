@@ -2,12 +2,15 @@ name: SlimefunWarfare
 main: io.github.seggan.slimefunwarfare.SlimefunWarfare
 version: ${version}
 author: Seggan
-depend:
-  - Slimefun
+contributors:
+  - LobbyTech-MC
+  - wickidcow
+description: Warfare-themed Slimefun addon maintained for Slimefun Legacy and modern Paper servers.
+website: https://github.com/wickidcow/SF_SlimefunWarfare
+api-version: '26.2'
+depend: [Slimefun]
 softdepend:
-  - GuizhanLibPlugin
-  - SimpleStorage
   - InfinityExpansion
+  - InfinityExpansion2
   - DynaTech
   - TownyFlight
-api-version: 1.16

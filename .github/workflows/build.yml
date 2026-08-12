@@ -1,0 +1,166 @@
+name: Build SlimefunWarfare Legacy
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slimefunwarfare-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LEGACY_ARTIFACT_VERSION: "1.0.0"
+  LEGACY_ARTIFACT: "SF_SlimefunWarfare_Legacy_v1.0.0.jar"
+
+jobs:
+  build:
+    name: Build with Java 25
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Verify Legacy compatibility metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -Fq "<paper.version>[26.2.build,)</paper.version>" pom.xml
+          grep -Fq "<maven.compiler.release>21</maven.compiler.release>" pom.xml
+          grep -Fq "depend: [Slimefun]" src/main/resources/plugin.yml
+          grep -Fq "api-version: '26.2'" src/main/resources/plugin.yml
+          grep -Fq '<finalName>SF_SlimefunWarfare_Legacy_v${project.version}</finalName>' pom.xml
+
+          if grep -R --line-number -E 'net\.guizhanss|GuizhanUpdater\.start|isPluginEnabled\("GuizhanLibPlugin"\)' src/main/java pom.xml src/main/resources/plugin.yml; then
+            echo "Guizhan runtime/update code must not be present in the Legacy fork."
+            exit 1
+          fi
+
+          if grep -R --line-number "runTaskTimerAsynchronously" src/main/java; then
+            echo "Unsafe async Bukkit scheduler usage remains."
+            exit 1
+          fi
+
+          echo "Legacy compatibility metadata checks passed."
+
+      - name: Build SlimefunWarfare
+        run: mvn -B -Dmaven.test.skip=true clean package --file pom.xml
+
+      - name: Stage versioned Legacy JAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          JAR="target/SF_SlimefunWarfare_Legacy_v${LEGACY_ARTIFACT_VERSION}.jar"
+          OUTPUT="dist/${LEGACY_ARTIFACT}"
+
+          test -s "$JAR"
+          cp "$JAR" "$OUTPUT"
+          test -s "$OUTPUT"
+
+          echo "Built: $OUTPUT"
+          sha256sum "$OUTPUT"
+          jar tf "$OUTPUT" | grep -Fq 'plugin.yml'
+          unzip -p "$OUTPUT" plugin.yml | grep -Fq "version: ${LEGACY_ARTIFACT_VERSION}"
+          unzip -p "$OUTPUT" plugin.yml | grep -Fq "api-version: '26.2'"
+
+      - name: Upload direct versioned Legacy JAR
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.LEGACY_ARTIFACT }}
+          path: dist/${{ env.LEGACY_ARTIFACT }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish current raw JAR release
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v${LEGACY_ARTIFACT_VERSION}"
+          JAR="dist/${LEGACY_ARTIFACT}"
+
+          cat > release-notes.md <<'EOF'
+          # ⚔️ SlimefunWarfare Legacy v1.0.0
+
+          The first Slimefun Legacy release of Warfare modernizes the addon for the Paper 26.2 generation while preserving the original combat, technology, meteor, machine, and power-suit progression.
+
+          ## ✅ Compatibility updates
+          - Updated the project to the **Paper 26.2 API**.
+          - Builds on **Java 25** while emitting **Java 21-compatible addon bytecode**.
+          - **Slimefun Legacy** is now the primary runtime target.
+          - Removed the hard **GuizhanLibPlugin** runtime dependency.
+          - Removed the old Gugu automatic-updater path.
+          - Migrated removed Paper `Attribute.GENERIC_*` constants to the current attribute API.
+          - Replaced unsafe asynchronous player/inventory/world repeating work with Paper-safe scheduling.
+          - Added support for both current and legacy **DynaTech Orechid** package layouts.
+          - Added detection for both **InfinityExpansion** and **InfinityExpansion2**.
+
+          ## 🔫 Gameplay/runtime fixes
+          - Fixed an inherited gun-ammunition race where Slimefun backpack contents were resolved asynchronously after a weapon had already decided whether it could fire.
+          - Off-hand and normal player-inventory ammunition consumption is now synchronous and deterministic.
+          - Backpack-ammo scanning is intentionally disabled during firing until it can be implemented safely around Slimefun Legacy's asynchronous backpack API.
+
+          ## 🇺🇸 English Legacy cleanup
+          - Restored **Seggan's original English item names and lore** over the Chinese intermediate-fork catalog.
+          - Restored English Slimefun Warfare guide/category names.
+          - Restored English power-suit module text and configuration comments.
+          - Removed obsolete bundled Guizhan helper code.
+          - Removed an unused duplicate item catalog inherited from the intermediate fork.
+
+          ## 🧹 Build & repository cleanup
+          - Removed obsolete Java 8 and mismatched Gradle workflows.
+          - Added the current Legacy GitHub Actions build and validation checks.
+          - Updated the README with upstream credit, feature overview, compatibility, dependencies, install instructions, GPLv3 wording, AlbionMC.com context, and non-affiliation notice.
+
+          ## 📦 Dependencies
+          **Required:** Slimefun Legacy
+
+          **Optional integrations:**
+          - InfinityExpansion / InfinityExpansion2
+          - DynaTech
+          - TownyFlight
+
+          **Not required:**
+          - GuizhanLibPlugin
+          - SimpleStorage
+          - Separate InfinityLib plugin/JAR (InfinityLib is shaded into this build)
+
+          ## 📥 Download
+          Use the attached raw server plugin directly:
+
+          `SF_SlimefunWarfare_Legacy_v1.0.0.jar`
+
+          Place it directly in your server's `plugins` folder. No source archive extraction is required.
+
+          ## 🧪 Runtime testing note
+          Compilation, metadata validation, packaging, and JAR output are verified. Warfare is a large addon with high-impact systems, so continued live testing is recommended for projectiles, explosives/nuclear effects, meteors, machines/energy, power-suit flight/modules, and deeper Folia behavior.
+
+          ---
+
+          Full credit remains with **Seggan** for creating SlimefunWarfare and **LobbyTech-MC** for maintaining the intermediate modernized fork used as this Legacy branch's starting point.
+          EOF
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$JAR" --clobber
+            gh release edit "$TAG" --title "SlimefunWarfare Legacy v${LEGACY_ARTIFACT_VERSION}" --notes-file release-notes.md --latest
+          else
+            gh release create "$TAG" "$JAR" --target "$GITHUB_SHA" --title "SlimefunWarfare Legacy v${LEGACY_ARTIFACT_VERSION}" --notes-file release-notes.md --latest
+          fi

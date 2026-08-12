@@ -7,18 +7,18 @@ import io.github.seggan.slimefunwarfare.items.Bullet;
 import io.github.seggan.slimefunwarfare.lists.Categories;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
-import io.github.thebusybiscuit.slimefun4.api.player.PlayerBackpack;
-import io.github.thebusybiscuit.slimefun4.api.player.PlayerProfile;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.core.attributes.DamageableItem;
 import io.github.thebusybiscuit.slimefun4.core.handlers.ItemUseHandler;
-import io.github.thebusybiscuit.slimefun4.implementation.items.backpacks.SlimefunBackpack;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.items.ItemUtils;
+import java.util.Objects;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.Getter;
 import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LlamaSpit;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -26,12 +26,6 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
-
-import lombok.Getter;
-
-import java.util.concurrent.atomic.AtomicReference;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 @Getter
 public class Gun extends SlimefunItem implements DamageableItem {
@@ -68,58 +62,61 @@ public class Gun extends SlimefunItem implements DamageableItem {
     public ItemUseHandler getItemHandler() {
         return e -> {
             e.cancel();
-            Player p = e.getPlayer();
-            ItemStack gun = p.getInventory().getItemInMainHand();
+            Player player = e.getPlayer();
+            ItemStack gun = player.getInventory().getItemInMainHand();
             if (!(SlimefunItem.getByItem(gun) instanceof Gun)) {
                 return;
             }
 
             ItemMeta meta = gun.getItemMeta();
+            if (meta == null) {
+                return;
+            }
+
             PersistentDataContainer container = meta.getPersistentDataContainer();
             long lastUse = container.getOrDefault(Gun.LAST_USE, PersistentDataType.LONG, 0L);
             long currentTime = System.currentTimeMillis();
             if ((currentTime - lastUse) < cooldown) {
-                p.sendMessage(ChatColor.RED + "换弹中!");
+                player.sendMessage(ChatColor.RED + "Reloading!");
                 return;
             }
+
             container.set(LAST_USE, PersistentDataType.LONG, currentTime);
             gun.setItemMeta(meta);
-            shoot(p, gun);
+            shoot(player, gun);
         };
     }
 
-    public void shoot(@Nonnull Player p, @Nonnull ItemStack gun) {
-        PlayerInventory inv = p.getInventory();
+    public void shoot(@Nonnull Player player, @Nonnull ItemStack gun) {
+        PlayerInventory inventory = player.getInventory();
 
-        Bullet bullet = checkAndConsume(inv.getItemInOffHand());
-
-        if (bullet == null) {
-            if (SlimefunWarfare.inst().getConfig().getBoolean("guns.use-bullets-from-inv", true)) {
-                bullet = checkAndConsumeInv(inv);
-            }
-
-            if (bullet == null) {
-                p.sendMessage(ChatColor.RED + "子弹耗尽!");
-                return;
-            }
+        Bullet bullet = checkAndConsume(inventory.getItemInOffHand());
+        if (bullet == null && SlimefunWarfare.inst().getConfig().getBoolean("guns.use-bullets-from-inv", true)) {
+            bullet = checkAndConsumeStorage(inventory);
         }
 
-        Vector v = p.getEyeLocation().subtract(0, 1, 0).getDirection().multiply(20);
-        LlamaSpit spit = p.launchProjectile(LlamaSpit.class);
+        if (bullet == null) {
+            player.sendMessage(ChatColor.RED + "Out of bullets!");
+            return;
+        }
+
+        Vector velocity = player.getEyeLocation().subtract(0, 1, 0).getDirection().multiply(20);
+        LlamaSpit spit = player.launchProjectile(LlamaSpit.class);
         spit.setMetadata("isGunBullet", new FixedMetadataValue(SlimefunWarfare.inst(), true));
-        spit.setMetadata("damage",
+        spit.setMetadata(
+            "damage",
             new FixedMetadataValue(SlimefunWarfare.inst(), this.damageDealt * bullet.getMultiplier())
         );
         spit.setMetadata("isFire", new FixedMetadataValue(SlimefunWarfare.inst(), bullet.isFire()));
-        spit.setMetadata("locInfo", new FixedMetadataValue(
-            SlimefunWarfare.inst(),
-            Util.serializeLocation(p.getEyeLocation())
-        ));
-        spit.setMetadata("rangeInfo", new FixedMetadataValue(
-            SlimefunWarfare.inst(),
-            range + ":" + minRange
-        ));
-        spit.setVelocity(v);
+        spit.setMetadata(
+            "locInfo",
+            new FixedMetadataValue(SlimefunWarfare.inst(), Util.serializeLocation(player.getEyeLocation()))
+        );
+        spit.setMetadata(
+            "rangeInfo",
+            new FixedMetadataValue(SlimefunWarfare.inst(), range + ":" + minRange)
+        );
+        spit.setVelocity(velocity);
     }
 
     @Override
@@ -127,36 +124,41 @@ public class Gun extends SlimefunItem implements DamageableItem {
         return true;
     }
 
+    /**
+     * Checks only normal player storage slots. Slimefun backpacks are intentionally not scanned here.
+     *
+     * <p>Slimefun Legacy resolves backpack contents asynchronously. Waiting for that result during a weapon
+     * interaction would block the server thread, while consuming from the callback would make firing and ammo
+     * mutation race each other. Keeping this path synchronous makes each shot atomic and predictable.</p>
+     */
     @Nullable
-    protected static Bullet checkAndConsumeInv(@Nonnull Inventory inv) {
-        Bullet bullet = null;
+    protected static Bullet checkAndConsumeStorage(@Nonnull PlayerInventory inventory) {
+        for (ItemStack stack : inventory.getStorageContents()) {
+            if (stack == null) {
+                continue;
+            }
 
-        for (ItemStack itemStack : inv) {
-            bullet = checkAndConsume(itemStack);
+            Bullet bullet = checkAndConsume(stack);
             if (bullet != null) {
-                break;
+                return bullet;
             }
         }
 
-        return bullet;
+        return null;
     }
 
     @Nullable
     protected static Bullet checkAndConsume(@Nonnull ItemStack stack) {
-        AtomicReference<Bullet> bullet = new AtomicReference<>(null);
-
         SlimefunItem item = SlimefunItem.getByItem(stack);
-        if (item instanceof Bullet) {
-            bullet.set((Bullet) item);
-            ItemUtils.consumeItem(stack, true);
-        } else if (item instanceof SlimefunBackpack) {
-        	PlayerBackpack.getAsync(stack, backpack -> bullet.set(checkAndConsumeInv(backpack.getInventory())), true);
+        if (!(item instanceof Bullet bullet)) {
+            return null;
         }
 
-        return bullet.get();
+        ItemUtils.consumeItem(stack, true);
+        return bullet;
     }
 
-	public long getCooldown() {
-		return cooldown;
-	}
+    public long getCooldown() {
+        return cooldown;
+    }
 }

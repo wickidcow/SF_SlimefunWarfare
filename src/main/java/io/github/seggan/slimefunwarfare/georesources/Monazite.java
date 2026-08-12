@@ -3,14 +3,13 @@ package io.github.seggan.slimefunwarfare.georesources;
 import io.github.mooy1.infinitylib.core.AbstractAddon;
 import io.github.seggan.slimefunwarfare.Util;
 import io.github.thebusybiscuit.slimefun4.api.geo.GEOResource;
+import java.util.Locale;
+import javax.annotation.Nonnull;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.inventory.ItemStack;
-
-import java.util.Locale;
-import javax.annotation.Nonnull;
 
 public class Monazite implements GEOResource {
 
@@ -34,6 +33,7 @@ public class Monazite implements GEOResource {
     private final ItemStack item;
 
     public Monazite(ItemStack stack) {
+        // Keep the historical key spelling for existing worlds/data compatibility.
         key = AbstractAddon.createKey("mozanite");
         item = stack;
     }
@@ -41,7 +41,7 @@ public class Monazite implements GEOResource {
     @Override
     public int getDefaultSupply(@Nonnull World.Environment environment, @Nonnull Biome biome) {
         if (biome == theBiome) {
-            return Bukkit.getPluginManager().isPluginEnabled("InfinityExpansion") ? 1 : 4;
+            return hasInfinityExpansion() ? 1 : 4;
         }
 
         return 0;
@@ -49,13 +49,18 @@ public class Monazite implements GEOResource {
 
     @Override
     public int getMaxDeviation() {
-        return Bukkit.getPluginManager().isPluginEnabled("InfinityExpansion") ? 2 : 3;
+        return hasInfinityExpansion() ? 2 : 3;
+    }
+
+    private static boolean hasInfinityExpansion() {
+        return Bukkit.getPluginManager().isPluginEnabled("InfinityExpansion")
+            || Bukkit.getPluginManager().isPluginEnabled("InfinityExpansion2");
     }
 
     @Nonnull
     @Override
     public String getName() {
-        return "独居石";
+        return "Monazite";
     }
 
     @Nonnull
