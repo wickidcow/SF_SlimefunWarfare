@@ -10,6 +10,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import io.github.seggan.slimefunwarfare.items.Dummy;
 import io.github.seggan.slimefunwarfare.items.EnergyBlade;
 import io.github.seggan.slimefunwarfare.lists.Items;
@@ -26,9 +27,16 @@ public class HitListener implements Listener {
         Entity entity = e.getDamager();
         if (!(entity instanceof Player)) return;
 
-        ItemStack item = ((Player) entity).getInventory().getItemInMainHand();
+        Player player = (Player) entity;
+        ItemStack item = player.getInventory().getItemInMainHand();
         SlimefunItem slimefunItem = SlimefunItem.getByItem(item);
         if (slimefunItem instanceof EnergyBlade) {
+            if (!WorldRestrictions.check(player, player.getLocation())) {
+                e.setCancelled(true);
+                e.getEntity().setFireTicks(0);
+                return;
+            }
+
             EnergyBlade blade = (EnergyBlade) slimefunItem;
             float charge = blade.getItemCharge(item);
 

@@ -3,6 +3,7 @@ package io.github.seggan.slimefunwarfare.items.guns;
 import io.github.mooy1.infinitylib.core.AbstractAddon;
 import io.github.seggan.slimefunwarfare.SlimefunWarfare;
 import io.github.seggan.slimefunwarfare.Util;
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import io.github.seggan.slimefunwarfare.items.Bullet;
 import io.github.seggan.slimefunwarfare.lists.Categories;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
@@ -88,6 +89,10 @@ public class Gun extends SlimefunItem implements DamageableItem {
     }
 
     public void shoot(@Nonnull Player player, @Nonnull ItemStack gun) {
+        if (!WorldRestrictions.check(player, player.getLocation())) {
+            return;
+        }
+
         PlayerInventory inventory = player.getInventory();
 
         Bullet bullet = checkAndConsume(inventory.getItemInOffHand());

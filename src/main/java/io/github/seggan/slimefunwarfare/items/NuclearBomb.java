@@ -1,6 +1,7 @@
 package io.github.seggan.slimefunwarfare.items;
 
 import io.github.seggan.slimefunwarfare.SlimefunWarfare;
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
@@ -38,6 +39,11 @@ public class NuclearBomb extends SlimefunItem implements Radioactive {
                 return;
             }
             Block b = optionalBlock.get();
+
+            if (!WorldRestrictions.check(e.getPlayer(), b.getLocation())) {
+                return;
+            }
+
             b.setType(Material.AIR);
             TNTPrimed tnt = b.getWorld().spawn(b.getLocation().add(0.5, 0, 0.5), TNTPrimed.class);
             tnt.setFuseTicks(100);

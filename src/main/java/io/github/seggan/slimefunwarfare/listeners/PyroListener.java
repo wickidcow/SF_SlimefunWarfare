@@ -1,5 +1,6 @@
 package io.github.seggan.slimefunwarfare.listeners;
 
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import io.github.seggan.slimefunwarfare.lists.Items;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
 import org.bukkit.entity.Entity;
@@ -24,6 +25,9 @@ public class PyroListener implements Listener {
             return;
         }
         if (sfItem.getItem().equals(Items.PYRO_POWDER)) {
+            if (!WorldRestrictions.isAllowed(entity.getWorld())) {
+                return;
+            }
             entity.getWorld().createExplosion(entity.getLocation(), 3F);
         }
     }

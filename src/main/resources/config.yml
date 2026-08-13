@@ -2,6 +2,15 @@
 # Built-in Gugu/Guizhan automatic updating is intentionally disabled in this fork.
 auto-update: false
 
+# Destructive Warfare world restrictions.
+# By default, weapons and destructive Warfare effects only work in survival_resource.
+# To allow additional worlds, add their exact names separated by commas.
+# Example: "survival_resource, warfare_arena"
+world-restrictions:
+  enabled: true
+  allowed-worlds: "survival_resource"
+  denied-message: "&cWarfare items are not allowed in this world. &7Please ask your server owner to allow this world if you believe this is a mistake."
+
 # Explosion settings
 explosions:
   # Chance for reinforced concrete to explode, in percent.

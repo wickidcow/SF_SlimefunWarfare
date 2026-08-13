@@ -4,6 +4,7 @@ import io.github.mooy1.infinitylib.common.CoolDowns;
 import io.github.mooy1.infinitylib.common.Scheduler;
 import io.github.mooy1.infinitylib.core.AddonConfig;
 import io.github.seggan.slimefunwarfare.SlimefunWarfare;
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import io.github.seggan.slimefunwarfare.lists.Categories;
 import io.github.seggan.slimefunwarfare.lists.Items;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
@@ -39,6 +40,11 @@ public class MeteorAttractor extends SimpleSlimefunItem<BlockUseHandler> {
     }
 
     private void drop(Location l, Player p) {
+        if (!WorldRestrictions.isAllowed(l.getWorld())) {
+            WorldRestrictions.sendDenied(p);
+            return;
+        }
+
         Block b = l.getBlock();
         if (!Slimefun.getProtectionManager().hasPermission(p, b, Interaction.BREAK_BLOCK)) return;
 
@@ -72,17 +78,23 @@ public class MeteorAttractor extends SimpleSlimefunItem<BlockUseHandler> {
     public BlockUseHandler getItemHandler() {
         return (b) -> {
             AddonConfig config = SlimefunWarfare.inst().getConfig();
-            if (cooldowns.checkAndReset(b.getPlayer().getUniqueId())) {
+            Player player = b.getPlayer();
+            Location l = b.getClickedBlock().get().getLocation();
+
+            if (!WorldRestrictions.check(player, l)) {
+                return;
+            }
+
+            if (cooldowns.checkAndReset(player.getUniqueId())) {
                 int mins = ThreadLocalRandom.current().nextInt(
                     config.getInt("space.meteor-min-time", 10),
                     config.getInt("space.meteor-max-time", 30) + 1
                 );
 
-                Location l = b.getClickedBlock().get().getLocation();
-                b.getPlayer().sendMessage("流星将在" + mins + "分钟内坠落");
-                Scheduler.run(mins * 60 * 20, () -> drop(l, b.getPlayer()));
+                player.sendMessage("流星将在" + mins + "分钟内坠落");
+                Scheduler.run(mins * 60 * 20, () -> drop(l, player));
             } else {
-                b.getPlayer().sendMessage(ChatColor.RED + "流星吸引器有"
+                player.sendMessage(ChatColor.RED + "流星吸引器有"
                     + config.getInt("space.space.attractor-cooldown", 1) +
                     "分钟的冷却时间"
                 );

@@ -2,6 +2,7 @@ package io.github.seggan.slimefunwarfare.listeners;
 
 import io.github.seggan.slimefunwarfare.SlimefunWarfare;
 import io.github.seggan.slimefunwarfare.Util;
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.common.CommonPatterns;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
@@ -28,6 +29,15 @@ public class BulletListener implements Listener {
         Projectile bullet = (Projectile) e.getDamager();
         Entity shot = e.getEntity();
         if (bullet.hasMetadata("isGunBullet")) {
+            if (!WorldRestrictions.isAllowed(shot.getWorld())) {
+                e.setCancelled(true);
+                if (bullet.getShooter() instanceof Player player) {
+                    WorldRestrictions.sendDenied(player);
+                }
+                bullet.remove();
+                return;
+            }
+
             if (bullet.getShooter() instanceof Player) {
                 Player shooter = (Player) bullet.getShooter();
                 if (!Slimefun.getProtectionManager().hasPermission(shooter, shot.getLocation(), Interaction.ATTACK_PLAYER)) {
@@ -59,8 +69,18 @@ public class BulletListener implements Listener {
 
         if (!(entity instanceof ShulkerBullet) || b == null) return;
 
-        if (e.getEntity().hasMetadata("isGunBullet") && SlimefunWarfare.inst().getConfig().getBoolean("guns.energy-rifle-explosions", false)) {
-            b.getWorld().createExplosion(b.getLocation(), 1F);
+        if (e.getEntity().hasMetadata("isGunBullet")) {
+            if (!WorldRestrictions.isAllowed(b.getWorld())) {
+                if (e.getEntity().getShooter() instanceof Player player) {
+                    WorldRestrictions.sendDenied(player);
+                }
+                entity.remove();
+                return;
+            }
+
+            if (SlimefunWarfare.inst().getConfig().getBoolean("guns.energy-rifle-explosions", false)) {
+                b.getWorld().createExplosion(b.getLocation(), 1F);
+            }
         }
     }
 }

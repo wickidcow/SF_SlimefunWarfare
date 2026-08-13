@@ -1,6 +1,7 @@
 package io.github.seggan.slimefunwarfare.items;
 
 import io.github.seggan.slimefunwarfare.SlimefunWarfare;
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import io.github.seggan.slimefunwarfare.lists.Categories;
 import io.github.seggan.slimefunwarfare.lists.Items;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
@@ -10,6 +11,7 @@ import io.github.thebusybiscuit.slimefun4.core.handlers.ItemUseHandler;
 import io.github.thebusybiscuit.slimefun4.utils.ChatUtils;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -38,16 +40,22 @@ public class Grenade extends SlimefunItem {
 
     private ItemUseHandler onLaunch() {
         return e -> {
-            PlayerInventory inv = e.getPlayer().getInventory();
+            Player player = e.getPlayer();
+            e.cancel();
+
+            if (!WorldRestrictions.check(player, player.getLocation())) {
+                return;
+            }
+
+            PlayerInventory inv = player.getInventory();
             ItemStack item = inv.getItemInMainHand();
-            if (SlimefunItem.getByItem(item) instanceof Grenade ) {
-                e.cancel();
-                Snowball snowball = e.getPlayer().launchProjectile(Snowball.class);
+            if (SlimefunItem.getByItem(item) instanceof Grenade) {
+                Snowball snowball = player.launchProjectile(Snowball.class);
                 snowball.setMetadata("effect", new FixedMetadataValue(
                     SlimefunWarfare.inst(),
                     chemical.getItemId()
                 ));
-                if (e.getPlayer().getGameMode() != GameMode.CREATIVE) {
+                if (player.getGameMode() != GameMode.CREATIVE) {
                     item.setAmount(item.getAmount() - 1);
                     inv.setItemInMainHand(item);
                 }

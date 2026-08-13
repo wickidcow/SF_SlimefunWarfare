@@ -10,6 +10,7 @@ import org.bukkit.util.Vector;
 
 import io.github.seggan.slimefunwarfare.SlimefunWarfare;
 import io.github.seggan.slimefunwarfare.Util;
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import io.github.seggan.slimefunwarfare.lists.Items;
 import io.github.thebusybiscuit.slimefun4.core.attributes.Rechargeable;
 import io.github.thebusybiscuit.slimefun4.implementation.SlimefunItems;
@@ -26,6 +27,10 @@ public class EnergyRifle extends Gun implements Rechargeable {
 
     @Override
     public void shoot(@Nonnull Player p, @Nonnull ItemStack gun) {
+        if (!WorldRestrictions.check(p, p.getLocation())) {
+            return;
+        }
+
         if (getItemCharge(gun) < 5) {
             return;
         } else {

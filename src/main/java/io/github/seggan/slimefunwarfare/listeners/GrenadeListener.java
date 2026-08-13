@@ -1,10 +1,12 @@
 package io.github.seggan.slimefunwarfare.listeners;
 
+import io.github.seggan.slimefunwarfare.WorldRestrictions;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -44,6 +46,13 @@ public class GrenadeListener implements Listener {
     }
 
     private void applyEffect(Entity snowball, Location loc) {
+        if (!WorldRestrictions.isAllowed(loc.getWorld())) {
+            if (snowball instanceof Projectile projectile && projectile.getShooter() instanceof Player player) {
+                WorldRestrictions.sendDenied(player);
+            }
+            return;
+        }
+
         String id = snowball.getMetadata("effect").get(0).asString();
         AreaEffectCloud cloud;
         switch (id) {
