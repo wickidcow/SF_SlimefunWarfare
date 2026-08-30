@@ -77,6 +77,9 @@ public class SlimefunWarfare extends AbstractAddon implements Listener {
 
         Categories.setup(this);
 
+        // Apply optional ItemsAdder models before Slimefun locks/registers these item stacks.
+        ItemsAdderIntegration.applyVisuals(this);
+
         Setup.setupItems(this);
         Setup.setupMelee(this);
         Setup.setupBullets(this);
