@@ -8,10 +8,16 @@ import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.event.Event;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.Plugin;
 
 /**
  * Optional ItemsAdder bridge used only to borrow an ItemsAdder item's visual ItemStack.
@@ -22,8 +28,135 @@ import org.bukkit.inventory.meta.ItemMeta;
 public final class ItemsAdderIntegration {
 
     private static final String CONFIG_ROOT = "itemsadder.visuals";
+    private static final long READY_TIMEOUT_TICKS = 600L;
 
     private ItemsAdderIntegration() {
+    }
+
+    /**
+     * Runs the supplied continuation once ItemsAdder's custom item registry is ready.
+     *
+     * <p>ItemsAdder loads its content asynchronously, so Bukkit/Paper plugin enable order alone
+     * is not enough. Warfare must wait for ItemsAdderLoadDataEvent before borrowing model data,
+     * otherwise every CustomStack lookup can return null even though the configured IDs are valid.</p>
+     */
+    public static void runWhenReady(SlimefunWarfare plugin, Runnable continuation) {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".enabled", true)) {
+            continuation.run();
+            return;
+        }
+
+        Plugin itemsAdder = plugin.getServer().getPluginManager().getPlugin("ItemsAdder");
+        if (itemsAdder == null) {
+            plugin.getLogger().info("ItemsAdder visual integration not enabled: ItemsAdder is not installed.");
+            continuation.run();
+            return;
+        }
+
+        AtomicBoolean finished = new AtomicBoolean(false);
+        Listener[] loadListener = new Listener[1];
+
+        Runnable finish = () -> {
+            if (!finished.compareAndSet(false, true)) {
+                return;
+            }
+
+            if (loadListener[0] != null) {
+                HandlerList.unregisterAll(loadListener[0]);
+            }
+
+            applyVisuals(plugin);
+            continuation.run();
+        };
+
+        try {
+            loadListener[0] = registerLoadDataListener(plugin, finish);
+            plugin.getLogger().info("Waiting for ItemsAdder custom items to finish loading before registering Warfare visuals.");
+        } catch (ReflectiveOperationException | LinkageError ex) {
+            plugin.getLogger().log(
+                Level.WARNING,
+                "ItemsAdder was detected but its load-data event API could not be registered. Warfare will probe its registry instead.",
+                ex
+            );
+        }
+
+        // Register the listener first, then probe. This closes the race where ItemsAdder could
+        // finish loading between an initial registry check and event-listener registration.
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (hasAnyConfiguredVisual(plugin)) {
+                finish.run();
+            }
+        });
+
+        // Fallback for unusual ItemsAdder builds where the load-data event was already fired or
+        // cannot be observed. These probes are cheap and only run during server startup.
+        long[] probes = {20L, 100L, 300L};
+        for (long delay : probes) {
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                if (!finished.get() && hasAnyConfiguredVisual(plugin)) {
+                    finish.run();
+                }
+            }, delay);
+        }
+
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (!finished.get()) {
+                plugin.getLogger().warning(
+                    "ItemsAdder readiness was not observed within 30 seconds. Warfare will continue with any visuals currently available."
+                );
+                finish.run();
+            }
+        }, READY_TIMEOUT_TICKS);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Listener registerLoadDataListener(SlimefunWarfare plugin, Runnable finish)
+        throws ReflectiveOperationException {
+        Class<?> rawEventClass = Class.forName("dev.lone.itemsadder.api.Events.ItemsAdderLoadDataEvent");
+        if (!Event.class.isAssignableFrom(rawEventClass)) {
+            throw new ClassCastException("ItemsAdderLoadDataEvent is not a Bukkit Event");
+        }
+
+        Class<? extends Event> eventClass = (Class<? extends Event>) rawEventClass;
+        Listener listener = new Listener() {
+        };
+
+        plugin.getServer().getPluginManager().registerEvent(
+            eventClass,
+            listener,
+            EventPriority.MONITOR,
+            (ignored, event) -> plugin.getServer().getScheduler().runTask(plugin, finish),
+            plugin,
+            true
+        );
+        return listener;
+    }
+
+    private static boolean hasAnyConfiguredVisual(SlimefunWarfare plugin) {
+        ConfigurationSection mappings = plugin.getConfig().getConfigurationSection(CONFIG_ROOT + ".mappings");
+        if (mappings == null) {
+            return false;
+        }
+
+        try {
+            Class<?> customStackClass = Class.forName("dev.lone.itemsadder.api.CustomStack");
+            Method getInstance = customStackClass.getMethod("getInstance", String.class);
+
+            for (String slimefunId : supportedItems().keySet()) {
+                String itemsAdderId = mappings.getString(slimefunId, "").trim();
+                if (itemsAdderId.isEmpty()) {
+                    continue;
+                }
+
+                if (getInstance.invoke(null, itemsAdderId) != null) {
+                    return true;
+                }
+            }
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException | LinkageError ex) {
+            return false;
+        }
+
+        return false;
     }
 
     public static void applyVisuals(SlimefunWarfare plugin) {
