@@ -77,6 +77,13 @@ public class SlimefunWarfare extends AbstractAddon implements Listener {
 
         Categories.setup(this);
 
+        // ItemsAdder enables before/around Warfare, but its custom content is loaded asynchronously.
+        // Delay Warfare's Slimefun item registration until IA's data-ready event so valid custom
+        // item IDs do not look missing during startup.
+        ItemsAdderIntegration.runWhenReady(this, this::finishEnable);
+    }
+
+    private void finishEnable() {
         Setup.setupItems(this);
         Setup.setupMelee(this);
         Setup.setupBullets(this);
