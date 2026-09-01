@@ -6,24 +6,25 @@ import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 
 /**
- * Optional ItemsAdder bridge used only to borrow an ItemsAdder item's visual ItemStack.
+ * Optional ItemsAdder bridge used only to borrow an ItemsAdder item's visual model.
  *
  * <p>Slimefun remains authoritative for item identity and Warfare remains authoritative
- * for weapon behaviour. No ItemsAdder weapon behaviour is invoked by this class.</p>
+ * for weapon behaviour. ItemsAdder identity/gameplay metadata is deliberately not copied.</p>
  */
 public final class ItemsAdderIntegration {
 
@@ -80,16 +81,12 @@ public final class ItemsAdderIntegration {
             );
         }
 
-        // Register the listener first, then probe. This closes the race where ItemsAdder could
-        // finish loading between an initial registry check and event-listener registration.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (hasAnyConfiguredVisual(plugin)) {
                 finish.run();
             }
         });
 
-        // Fallback for unusual ItemsAdder builds where the load-data event was already fired or
-        // cannot be observed. These probes are cheap and only run during server startup.
         long[] probes = {20L, 100L, 300L};
         for (long delay : probes) {
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
@@ -144,11 +141,7 @@ public final class ItemsAdderIntegration {
 
             for (String slimefunId : supportedItems().keySet()) {
                 String itemsAdderId = mappings.getString(slimefunId, "").trim();
-                if (itemsAdderId.isEmpty()) {
-                    continue;
-                }
-
-                if (getInstance.invoke(null, itemsAdderId) != null) {
+                if (!itemsAdderId.isEmpty() && getInstance.invoke(null, itemsAdderId) != null) {
                     return true;
                 }
             }
@@ -227,37 +220,28 @@ public final class ItemsAdderIntegration {
                 return false;
             }
 
+            ItemMeta originalMeta = target.getItemMeta();
             ItemMeta visualMeta = visual.getItemMeta();
-            if (visualMeta == null) {
+            if (originalMeta == null || visualMeta == null) {
                 plugin.getLogger().warning(
-                    "ItemsAdder visual '" + itemsAdderId + "' has no item meta; keeping the vanilla Warfare visual."
+                    "ItemsAdder visual '" + itemsAdderId + "' has unusable item metadata for " + target.getItemId() + "."
                 );
                 return false;
             }
 
-            ItemMeta originalMeta = target.getItemMeta();
-            String displayName = originalMeta != null && originalMeta.hasDisplayName()
-                ? originalMeta.getDisplayName()
-                : null;
-            List<String> lore = originalMeta != null && originalMeta.hasLore()
-                ? originalMeta.getLore()
-                : null;
             int amount = target.getAmount();
-
             target.setType(visual.getType());
 
-            // Keep Warfare's player-facing name/lore while retaining ItemsAdder's model metadata.
-            if (displayName != null) {
-                visualMeta.setDisplayName(displayName);
-            }
-            if (lore != null) {
-                visualMeta.setLore(lore);
+            ItemMeta mergedMeta = target.getItemMeta();
+            if (mergedMeta == null) {
+                return false;
             }
 
-            // Add the Slimefun identity on top of the ItemsAdder ItemStack. This is what keeps
-            // Slimefun recipes, getByItem(), Warfare handlers and existing IDs authoritative.
-            Slimefun.getItemDataService().setItemData(visualMeta, target.getItemId());
-            target.setItemMeta(visualMeta);
+            copyWarfareMeta(originalMeta, mergedMeta);
+            copyVisualModelMeta(visualMeta, mergedMeta);
+            Slimefun.getItemDataService().setItemData(mergedMeta, target.getItemId());
+
+            target.setItemMeta(mergedMeta);
             target.setAmount(amount);
             return true;
         } catch (IllegalAccessException | InvocationTargetException ex) {
@@ -267,6 +251,64 @@ public final class ItemsAdderIntegration {
                 ex
             );
             return false;
+        }
+    }
+
+    private static void copyWarfareMeta(ItemMeta source, ItemMeta target) {
+        if (source.hasDisplayName()) {
+            target.setDisplayName(source.getDisplayName());
+        }
+        if (source.hasLore()) {
+            target.setLore(source.getLore());
+        }
+
+        target.setUnbreakable(source.isUnbreakable());
+
+        for (ItemFlag flag : source.getItemFlags()) {
+            target.addItemFlags(flag);
+        }
+        for (Map.Entry<Enchantment, Integer> enchantment : source.getEnchants().entrySet()) {
+            target.addEnchant(enchantment.getKey(), enchantment.getValue(), true);
+        }
+        if (source.hasAttributeModifiers() && source.getAttributeModifiers() != null) {
+            source.getAttributeModifiers().forEach(target::addAttributeModifier);
+        }
+
+        // Preserve Slimefun identity and Warfare-owned metadata without copying ItemsAdder's identity tags.
+        source.getPersistentDataContainer().copyTo(target.getPersistentDataContainer(), true);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void copyVisualModelMeta(ItemMeta source, ItemMeta target) {
+        if (source.hasCustomModelData()) {
+            target.setCustomModelData(source.getCustomModelData());
+        }
+
+        // Paper 26.2 can expose item_model and expanded custom-model-data components. Keep this
+        // reflective so the Java 21 bytecode target remains usable on the supported server range.
+        copyOptionalMetaValue(source, target, "getItemModel", "setItemModel");
+        copyOptionalMetaValue(source, target, "getCustomModelDataComponent", "setCustomModelDataComponent");
+    }
+
+    private static void copyOptionalMetaValue(ItemMeta source, ItemMeta target, String getterName, String setterName) {
+        try {
+            Method getter = source.getClass().getMethod(getterName);
+            Object value = getter.invoke(source);
+            if (value == null) {
+                return;
+            }
+
+            for (Method method : target.getClass().getMethods()) {
+                if (!method.getName().equals(setterName) || method.getParameterCount() != 1) {
+                    continue;
+                }
+                if (method.getParameterTypes()[0].isAssignableFrom(value.getClass())) {
+                    method.invoke(target, value);
+                    return;
+                }
+            }
+        } catch (ReflectiveOperationException ignored) {
+            // Component does not exist on this Paper API/runtime combination; classic CMD remains available.
         }
     }
 
