@@ -14,3 +14,5 @@ softdepend:
   - InfinityExpansion2
   - DynaTech
   - TownyFlight
+loadbefore:
+  - SlimeTinker
