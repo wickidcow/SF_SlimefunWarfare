@@ -10,7 +10,6 @@ import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.core.handlers.ItemUseHandler;
 import io.github.thebusybiscuit.slimefun4.utils.ChatUtils;
 import org.bukkit.GameMode;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.inventory.ItemStack;
@@ -24,7 +23,7 @@ public class Grenade extends SlimefunItem {
     public Grenade(SlimefunItemStack chemical) {
         super(Categories.EXPLOSIVES, new SlimefunItemStack(
             chemical.getItemId() + "_GRENADE",
-            Material.SNOWBALL,
+            Items.EMPTY_GRENADE,
             "&f化学手榴弹",
             "",
             "&7包含特殊物质: " + ChatUtils.removeColorCodes(chemical.getDisplayName())
