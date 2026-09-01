@@ -2,6 +2,31 @@
 # Built-in Gugu/Guizhan automatic updating is intentionally disabled in this fork.
 auto-update: false
 
+# Optional ItemsAdder visual integration.
+# Warfare keeps its own Slimefun IDs, recipes, damage, cooldowns and ammo logic.
+# These mappings only borrow the ItemsAdder ItemStack/model metadata before Warfare registers its items.
+# Missing ItemsAdder, missing IDs, or blank mappings automatically fall back to the normal Warfare visual.
+itemsadder:
+  visuals:
+    enabled: true
+    mappings:
+      GUN_PISTOL: "iaweapons:hand_gun"
+      GUN_REVOLVER: "iaweapons:revolver"
+      GUN_MACHINE_GUN: "iaweapons:ak47"
+      GUN_RIFLE: "iaweapons:ak47"
+      GUN_SHOTGUN: "iaweapons:shotgun"
+      GUN_ASSAULT_RIFLE: "iaweapons:ak47"
+      # No close model exists in the supplied pack yet, so these remain vanilla by default.
+      GUN_MINIGUN: ""
+      GUN_SNIPER: ""
+      GUN_ENERGY_RIFLE: ""
+      GRENADE: "iaweapons:grenade"
+      IRON_BULLET: "iaweapons:projectile"
+      LEAD_BULLET: "iaweapons:projectile"
+      DU_BULLET: "iaweapons:projectile"
+      GOLD_BULLET: "iaweapons:projectile"
+      TRINITROBULLETENE_BULLET: "iaweapons:projectile"
+
 # Destructive Warfare world restrictions.
 # By default, weapons and destructive Warfare effects only work in survival_resource.
 # To allow additional worlds, add their exact names separated by commas.
