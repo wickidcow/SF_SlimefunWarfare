@@ -5,9 +5,9 @@ author: Seggan
 contributors:
   - LobbyTech-MC
   - wickidcow
-description: Warfare-themed Slimefun addon maintained for Slimefun Legacy and modern Paper servers.
+description: Warfare-themed Slimefun addon maintained for Minecraft 1.21.11 through 26.2 and Slimefun Legacy.
 website: https://github.com/wickidcow/SF_SlimefunWarfare
-api-version: '26.2'
+api-version: '1.21.11'
 depend: [Slimefun]
 softdepend:
   - ItemsAdder
