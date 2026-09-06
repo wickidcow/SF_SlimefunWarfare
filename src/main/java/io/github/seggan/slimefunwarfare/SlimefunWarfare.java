@@ -77,20 +77,24 @@ public class SlimefunWarfare extends AbstractAddon implements Listener {
 
         Categories.setup(this);
 
-        // ItemsAdder enables before/around Warfare, but its custom content is loaded asynchronously.
-        // Delay Warfare's Slimefun item registration until IA's data-ready event so valid custom
-        // item IDs do not look missing during startup.
+        // Register all Warfare content that does not borrow an ItemsAdder visual synchronously.
+        // SlimeTinker enables after Warfare and resolves these material IDs during its own enable phase,
+        // so they must exist before Warfare returns from enable().
+        Setup.setupItems(this);
+        Setup.setupMelee(this);
+        Setup.setupSpace(this);
+        Setup.setupSuits(this);
+
+        // ItemsAdder loads custom content asynchronously. Only the Warfare items that actually borrow
+        // ItemsAdder models remain delayed, preserving those visuals without hiding core materials
+        // from addons such as SlimeTinker during startup.
         ItemsAdderIntegration.runWhenReady(this, this::finishEnable);
     }
 
     private void finishEnable() {
-        Setup.setupItems(this);
-        Setup.setupMelee(this);
         Setup.setupBullets(this);
         Setup.setupGuns(this);
         Setup.setupExplosives(this);
-        Setup.setupSpace(this);
-        Setup.setupSuits(this);
         Setup.setupResearches();
 
         Module.setup(this);
