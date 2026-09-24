@@ -7,14 +7,14 @@ import io.github.thebusybiscuit.slimefun4.core.attributes.Radioactivity;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.skins.PlayerHead;
 import io.github.thebusybiscuit.slimefun4.utils.HeadTexture;
 import io.github.thebusybiscuit.slimefun4.utils.LoreBuilder;
-import java.util.UUID;
 import lombok.experimental.UtilityClass;
 import org.bukkit.Color;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.meta.ItemMeta;
 
