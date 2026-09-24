@@ -10,6 +10,8 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.inventory.ItemStack;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
 
 public class Monazite implements GEOResource {
 
@@ -26,7 +28,9 @@ public class Monazite implements GEOResource {
             else if (c >= 'N' && c <= 'Z') c -= 13;
             sb.append(c);
         }
-        theBiome = Biome.valueOf(sb.toString().toUpperCase(Locale.ENGLISH));
+        theBiome = RegistryAccess.registryAccess()
+            .getRegistry(RegistryKey.BIOME)
+            .get(NamespacedKey.minecraft(sb.toString().toLowerCase(Locale.ENGLISH)));
     }
 
     private final NamespacedKey key;
